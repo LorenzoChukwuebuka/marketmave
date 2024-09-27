@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\EmailTemplate;
 use App\Models\GeneralSetting;
+use Illuminate\Http\Request;
 
 class EmailTemplateController extends Controller
 {
@@ -22,7 +22,7 @@ class EmailTemplateController extends Controller
         $email_template = EmailTemplate::findOrFail($id);
         $pageTitle = $email_template->name;
         $emptyMessage = 'No shortcode available';
-        return view('admin.email_template.edit', compact('pageTitle', 'email_template','emptyMessage'));
+        return view('admin.email_template.edit', compact('pageTitle', 'email_template', 'emptyMessage'));
     }
 
     public function update(Request $request, $id)
@@ -41,17 +41,57 @@ class EmailTemplateController extends Controller
         return back()->withNotify($notify);
     }
 
-
     public function emailSetting()
     {
         $pageTitle = 'Email Configuration';
         return view('admin.email_template.email_setting', compact('pageTitle'));
     }
 
+    // public function emailSettingUpdate(Request $request)
+    // {
+    //     $request->validate([
+    //         'email_method' => 'required|in:php,smtp,sendgrid,mailjet',
+    //         'host' => 'required_if:email_method,smtp',
+    //         'port' => 'required_if:email_method,smtp',
+    //         'username' => 'required_if:email_method,smtp',
+    //         'password' => 'required_if:email_method,smtp',
+    //         'enc' => 'required_if:email_method,smtp',
+    //         'appkey' => 'required_if:email_method,sendgrid',
+    //         'public_key' => 'required_if:email_method,mailjet',
+    //         'secret_key' => 'required_if:email_method,mailjet',
+    //     ], [
+    //         'host.required_if' => ':attribute is required for SMTP configuration',
+    //         'port.required_if' => ':attribute is required for SMTP configuration',
+    //         'username.required_if' => ':attribute is required for SMTP configuration',
+    //         'password.required_if' => ':attribute is required for SMTP configuration',
+    //         'enc.required_if' => ':attribute is required for SMTP configuration',
+    //         'appkey.required_if' => ':attribute is required for SendGrid configuration',
+    //         'public_key.required_if' => ':attribute is required for Mailjet configuration',
+    //         'secret_key.required_if' => ':attribute is required for Mailjet configuration',
+    //     ]);
+    //     if ($request->email_method == 'php') {
+    //         $data['name'] = 'php';
+    //     } else if ($request->email_method == 'smtp') {
+    //         $request->merge(['name' => 'smtp']);
+    //         $data = $request->only('name', 'host', 'port', 'enc', 'username', 'password', 'driver');
+    //     } else if ($request->email_method == 'sendgrid') {
+    //         $request->merge(['name' => 'sendgrid']);
+    //         $data = $request->only('name', 'appkey');
+    //     } else if ($request->email_method == 'mailjet') {
+    //         $request->merge(['name' => 'mailjet']);
+    //         $data = $request->only('name', 'public_key', 'secret_key');
+    //     }
+    //     $general = GeneralSetting::first();
+    //     $general->mail_config = $data;
+    //     $general->save();
+    //     $notify[] = ['success', 'Email configuration has been updated.'];
+    //     return back()->withNotify($notify);
+    // }
+
     public function emailSettingUpdate(Request $request)
     {
         $request->validate([
-            'email_method' => 'required|in:php,smtp,sendgrid,mailjet',
+            'email_method' => 'required|in:php,smtp,sendgrid,mailjet,brevo',
             'host' => 'required_if:email_method,smtp',
             'port' => 'required_if:email_method,smtp',
             'username' => 'required_if:email_method,smtp',
@@ -60,6 +100,7 @@ class EmailTemplateController extends Controller
             'appkey' => 'required_if:email_method,sendgrid',
             'public_key' => 'required_if:email_method,mailjet',
             'secret_key' => 'required_if:email_method,mailjet',
+            'brevo_api_key' => 'required_if:email_method,brevo', // Brevo API key validation
         ], [
             'host.required_if' => ':attribute is required for SMTP configuration',
             'port.required_if' => ':attribute is required for SMTP configuration',
@@ -69,7 +110,9 @@ class EmailTemplateController extends Controller
             'appkey.required_if' => ':attribute is required for SendGrid configuration',
             'public_key.required_if' => ':attribute is required for Mailjet configuration',
             'secret_key.required_if' => ':attribute is required for Mailjet configuration',
+            'brevo_api_key.required_if' => ':attribute is required for Brevo configuration', // Brevo API key message
         ]);
+
         if ($request->email_method == 'php') {
             $data['name'] = 'php';
         } else if ($request->email_method == 'smtp') {
@@ -81,14 +124,18 @@ class EmailTemplateController extends Controller
         } else if ($request->email_method == 'mailjet') {
             $request->merge(['name' => 'mailjet']);
             $data = $request->only('name', 'public_key', 'secret_key');
+        } else if ($request->email_method == 'brevo') {
+            $request->merge(['name' => 'brevo']);
+            $data = $request->only('name', 'brevo_api_key'); // Brevo data
         }
+
         $general = GeneralSetting::first();
         $general->mail_config = $data;
         $general->save();
+
         $notify[] = ['success', 'Email configuration has been updated.'];
         return back()->withNotify($notify);
     }
-
 
     public function emailTemplate()
     {
@@ -114,7 +161,7 @@ class EmailTemplateController extends Controller
     public function sendTestMail(Request $request)
     {
         $request->validate([
-            'email' => 'required|email'
+            'email' => 'required|email',
         ]);
 
         $general = GeneralSetting::first();
@@ -126,6 +173,7 @@ class EmailTemplateController extends Controller
         try {
             sendGeneralEmail($request->email, $subject, $message, $receiver_name);
         } catch (\Exception $exp) {
+            //  dd($exp);
             $notify[] = ['error', 'Invalid credential'];
             return back()->withNotify($notify);
         }

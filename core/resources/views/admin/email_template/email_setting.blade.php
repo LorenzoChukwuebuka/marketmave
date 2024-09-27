@@ -18,6 +18,8 @@
                                         @lang('SendGrid API')</option>
                                     <option value="mailjet" @if ($general->mail_config->name == 'mailjet') selected @endif>
                                         @lang('Mailjet API')</option>
+                                    <option value="brevo" @if ($general->mail_config->name == 'brevo') selected @endif>
+                                        @lang('Brevo API')</option>
                                 </select>
                             </div>
                             <div class="form-group col-md-6 text-right">
@@ -51,8 +53,8 @@
                             <div class="form-group col-md-6">
                                 <label class="font-weight-bold">@lang('Username') <span
                                         class="text-danger">*</span></label>
-                                <input type="text" class="form-control" placeholder="@lang('Normally your email') address"
-                                    name="username" value="{{ $general->mail_config->username ?? '' }}" />
+                                <input type="text" class="form-control" placeholder="@lang('Normally your email address')" name="username"
+                                    value="{{ $general->mail_config->username ?? '' }}" />
                             </div>
                             <div class="form-group col-md-6">
                                 <label class="font-weight-bold">@lang('Password') <span
@@ -88,6 +90,16 @@
                                     name="secret_key" value="{{ $general->mail_config->secret_key ?? '' }}" />
                             </div>
                         </div>
+                        <div class="form-row mt-4 d-none configForm" id="brevo">
+                            <div class="col-md-12">
+                                <h6 class="mb-2">@lang('Brevo API Configuration')</h6>
+                            </div>
+                            <div class="form-group col-md-12">
+                                <label>@lang('API Key') <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" placeholder="@lang('Brevo API Key')"
+                                    name="brevo_api_key" value="{{ $general->mail_config->brevo_api_key ?? '' }}" />
+                            </div>
+                        </div>
                     </div>
                     <div class="card-footer">
                         <button type="submit" class="btn btn-block btn--primary mr-2">@lang('Update')</button>
@@ -95,10 +107,7 @@
                 </form>
             </div><!-- card end -->
         </div>
-
-
     </div>
-
 
     {{-- TEST MAIL MODAL --}}
     <div id="testMailModal" class="modal fade" tabindex="-1" role="dialog">
@@ -131,7 +140,6 @@
         </div>
     </div>
 @endsection
-
 
 @push('script')
     <script>

@@ -459,7 +459,7 @@ function getPageSections($arr = false)
 
 function getImage($image, $size = null)
 {
-    
+
     $clean = '';
     if (file_exists($image) && is_file($image)) {
         return asset($image) . $clean;
@@ -534,6 +534,8 @@ function sendEmail($user, $type = null, $shortCodes = [])
         sendSendGridMail($config, $user->email, $user->username, $emailTemplate->subj, $message, $general);
     } else if ($config->name == 'mailjet') {
         sendMailjetMail($config, $user->email, $user->username, $emailTemplate->subj, $message, $general);
+    } else if ($config->name == "brevo") {
+        sendBrevoMail($config, $user->email, $user->username, $emailTemplate->subj, $message, $general);
     }
 }
 
@@ -548,6 +550,7 @@ function sendPhpMail($receiver_email, $receiver_name, $subject, $message, $gener
 
 function sendSmtpMail($config, $receiver_email, $receiver_name, $subject, $message, $general)
 {
+
     $mail = new PHPMailer(true);
 
     try {
@@ -616,6 +619,62 @@ function sendMailjetMail($config, $receiver_email, $receiver_name, $subject, $me
         ],
     ];
     $response = $mj->post(\Mailjet\Resources::$Email, ['body' => $body]);
+}
+
+function sendBrevoMail($config, $receiver_email, $receiver_name, $subject, $message, $general)
+{
+
+
+
+    //  $url = 'https://api.brevo.com/v3/smtp/email';
+
+    $url = "https://api.sendinblue.com/v3/smtp/email";
+
+    $data = [
+        "sender" => [
+            "name" => $general->sitename,
+            "email" => $general->email_from,
+        ],
+        "to" => [
+            [
+                "email" => $receiver_email,
+                "name" => $receiver_name,
+            ],
+        ],
+        "subject" => $subject,
+        "htmlContent" => $message,
+    ];
+
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'accept: application/json',
+        'content-type: application/json',
+        'api-key: ' . $config->brevo_api_key,
+    ]);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+
+    $response = curl_exec($ch);
+
+    if (curl_errno($ch)) {
+        throw new Exception('cURL error: ' . curl_error($ch));
+    }
+
+    curl_close($ch);
+
+    $responseData = json_decode($response, true);
+
+    if (isset($responseData['messageId'])) {
+        // Email sent successfully
+        return true;
+    } else {
+        // API returned an error
+        $errorMessage = isset($responseData['message']) ? $responseData['message'] : 'Unknown error';
+        throw new Exception('Brevo API error: ' . $errorMessage);
+    }
 }
 
 function getPaginate($paginate = 15)
@@ -729,6 +788,8 @@ function sendGeneralEmail($email, $subject, $message, $receiver_name = '')
         sendSendGridMail($config, $email, $receiver_name, $subject, $message, $general);
     } else if ($config->name == 'mailjet') {
         sendMailjetMail($config, $email, $receiver_name, $subject, $message, $general);
+    } else if ($config->name == "brevo") {
+        sendBrevoMail($config, $email, $receiver_name, $subject, $message, $general);
     }
 }
 
